@@ -17,6 +17,8 @@ import {
   clearAuditLogs,
 } from "./db";
 import { storagePut, storageGet } from "./storage";
+import { getHanaConnection, executeHanaQuery, disconnectHana } from "./hana";
+import { ENV } from "./_core/env";
 
 export const appRouter = router({
   system: systemRouter,
@@ -70,6 +72,61 @@ export const appRouter = router({
 
     /** Get distinct source tables for filter dropdown */
     sourceTables: protectedProcedure.query(() => getDistinctSourceTables()),
+
+    hana: router({
+      testConnection: protectedProcedure.mutation(async () => {
+        try {
+          const connection = await getHanaConnection();
+          // Execute a simple query to verify connection
+          await executeHanaQuery("SELECT 1 FROM DUMMY");
+          disconnectHana();
+          return { success: true, message: "Conexão com SAP HANA bem-sucedida!" };
+        } catch (error: any) {
+          console.error("Erro ao testar conexão HANA:", error);
+          return { success: false, message: `Falha na conexão com SAP HANA: ${error.message || error}` };
+        }
+      }),
+      fetchAuditData: protectedProcedure
+        .input(z.object({
+          startDate: z.string().length(8), // YYYYMMDD
+          endDate: z.string().length(8),   // YYYYMMDD
+          schema: z.string().optional(),
+        }))
+        .mutation(async ({ input }) => {
+          try {
+            const schema = input.schema || ENV.hanaSchema;
+            const query = `
+              SELECT
+                T0."UpdateDate" AS "changeDate",
+                T0."UpdateTime" AS "changeTime",
+                CASE
+                  WHEN T0."Action" = 1 THEN 'Inclusão'
+                  WHEN T0."Action" = 2 THEN 'Alteração'
+                  WHEN T0."Action" = 3 THEN 'Exclusão'
+                  ELSE 'Desconhecido'
+                END AS "procedureType",
+                T0."ModuleName" AS "module",
+                T0."FormName" AS "routine",
+                T0."Object" AS "objType",
+                T0."UserSign" AS "sapUser",
+                T0."DocEntry" AS "docNum",
+                T0."LogInstance" AS "logInstance",
+                T0."OldValue" AS "previousContent",
+                T0."NewValue" AS "currentContent",
+                T0."TableName" AS "sourceTable"
+              FROM \"${schema}\".AUSR T0
+              WHERE T0."UpdateDate" BETWEEN '${input.startDate}' AND '${input.endDate}'
+              ORDER BY T0."UpdateDate" DESC, T0."UpdateTime" DESC;
+            `;
+            const result = await executeHanaQuery(query);
+            disconnectHana();
+            return { success: true, data: result, message: `Dados de auditoria do HANA importados com sucesso: ${result.length} registros.` };
+          } catch (error: any) {
+            console.error("Erro ao buscar dados do HANA:", error);
+            return { success: false, message: `Falha ao buscar dados do SAP HANA: ${error.message || error}` };
+          }
+        }),
+    }),
 
     /** Import audit rows from CSV upload */
     importRows: protectedProcedure

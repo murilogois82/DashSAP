@@ -103,6 +103,9 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.2.8
         version: 1.2.8(@types/react-dom@19.2.1(@types/react@19.2.1))(@types/react@19.2.1)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@sap/hana-client':
+        specifier: ^2.27.24
+        version: 2.27.24
       '@tanstack/react-query':
         specifier: ^5.90.2
         version: 5.90.2(react@19.2.1)
@@ -1780,6 +1783,10 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@sap/hana-client@2.27.24':
+    resolution: {integrity: sha512-tPYW7SCGbCi4UJ5i4mpP3TxoU/MIVAsOS7WmVUEsDmR+jL38yJW/l/Xqfy/roLvS7S/+ADKk9fPNoGiOf2gfZQ==}
+    engines: {node: '>=4.0.0'}
+
   '@shikijs/core@3.14.0':
     resolution: {integrity: sha512-qRSeuP5vlYHCNUIrpEBQFO7vSkR7jn7Kv+5X3FO/zBKVDGQbcnlScD3XhkrHi/R8Ltz0kEjvFR9Szp/XMRbFMw==}
 
@@ -2724,6 +2731,14 @@ packages:
 
   debug@2.6.9:
     resolution: {integrity: sha512-bC7ElrdJaJnPbAP+1EotYvqZsb3ecl5wi6Bfi6BJTUcNowp6cvspg0jXznRTKDjm/E7AdgFBVeAPVMNcKGsHMA==}
+    peerDependencies:
+      supports-color: '*'
+    peerDependenciesMeta:
+      supports-color:
+        optional: true
+
+  debug@3.1.0:
+    resolution: {integrity: sha512-OX8XqP7/1a9cqkxYw2yXss15f26NKWBpDXQd0/uK/KPqdQhxbPa994hnzjcE2VqQpDslf55723cKPUOGSmMY3g==}
     peerDependencies:
       supports-color: '*'
     peerDependenciesMeta:
@@ -5974,6 +5989,12 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.52.4':
     optional: true
 
+  '@sap/hana-client@2.27.24':
+    dependencies:
+      debug: 3.1.0
+    transitivePeerDependencies:
+      - supports-color
+
   '@shikijs/core@3.14.0':
     dependencies:
       '@shikijs/types': 3.14.0
@@ -7107,6 +7128,10 @@ snapshots:
   dayjs@1.11.18: {}
 
   debug@2.6.9:
+    dependencies:
+      ms: 2.0.0
+
+  debug@3.1.0:
     dependencies:
       ms: 2.0.0
 

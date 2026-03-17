@@ -1,4 +1,9 @@
 export const ENV = {
+  hanaHost: process.env.HANA_HOST ?? "",
+  hanaPort: process.env.HANA_PORT ?? "",
+  hanaUser: process.env.HANA_USER ?? "",
+  hanaPassword: process.env.HANA_PASSWORD ?? "",
+  hanaSchema: process.env.HANA_SCHEMA ?? "SBO_HELEXIA",
   appId: process.env.VITE_APP_ID ?? "",
   cookieSecret: process.env.JWT_SECRET ?? "",
   databaseUrl: process.env.DATABASE_URL ?? "",
