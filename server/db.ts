@@ -233,6 +233,19 @@ export async function getDistinctUsers() {
   return result.map((r) => r.sapUser);
 }
 
+export async function getDistinctSourceTables() {
+  const db = await getDb();
+  if (!db) return [];
+  const result = await db.selectDistinct({ sourceTable: auditLogs.sourceTable }).from(auditLogs);
+  return result.map((r) => r.sourceTable);
+}
+
+export async function clearAuditLogs() {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(auditLogs);
+}
+
 // ─── Audit Reports ──────────────────────────────────────────────
 
 export async function insertAuditReport(report: InsertAuditReport) {

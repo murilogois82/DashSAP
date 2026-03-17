@@ -26,6 +26,10 @@ import {
   History,
   Search,
   X,
+  Table2,
+  SplitSquareHorizontal,
+  Eye,
+  Copy,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
@@ -64,9 +68,11 @@ export default function AuditTimeline() {
   const [selectedUser, setSelectedUser] = useState<string>("");
   const [selectedModule, setSelectedModule] = useState<string>("");
   const [selectedProcedure, setSelectedProcedure] = useState<string>("");
+  const [selectedSourceTable, setSelectedSourceTable] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const [detailLog, setDetailLog] = useState<any>(null);
+  const [diffMode, setDiffMode] = useState(false);
   const pageSize = 25;
 
   const startDateStr = useMemo(() => formatDateParam(startDate), [startDate]);
@@ -74,6 +80,7 @@ export default function AuditTimeline() {
 
   const { data: modules } = trpc.audit.modules.useQuery();
   const { data: users } = trpc.audit.users.useQuery();
+  const { data: sourceTables } = trpc.audit.sourceTables.useQuery();
 
   const filters = useMemo(
     () => ({
@@ -82,11 +89,12 @@ export default function AuditTimeline() {
       sapUser: selectedUser || undefined,
       module: selectedModule || undefined,
       procedureType: (selectedProcedure || undefined) as any,
+      sourceTable: selectedSourceTable || undefined,
       search: searchTerm || undefined,
       page,
       pageSize,
     }),
-    [startDateStr, endDateStr, selectedUser, selectedModule, selectedProcedure, searchTerm, page]
+    [startDateStr, endDateStr, selectedUser, selectedModule, selectedProcedure, selectedSourceTable, searchTerm, page]
   );
 
   const { data: auditData, isLoading } = trpc.audit.list.useQuery(filters);
@@ -113,11 +121,12 @@ export default function AuditTimeline() {
     setSelectedUser("");
     setSelectedModule("");
     setSelectedProcedure("");
+    setSelectedSourceTable("");
     setSearchTerm("");
     setPage(1);
   };
 
-  const hasActiveFilters = selectedUser || selectedModule || selectedProcedure || searchTerm;
+  const hasActiveFilters = selectedUser || selectedModule || selectedProcedure || selectedSourceTable || searchTerm;
 
   const exportFilters = {
     startDate: startDateStr,
@@ -125,7 +134,28 @@ export default function AuditTimeline() {
     sapUser: selectedUser || undefined,
     module: selectedModule || undefined,
     procedureType: (selectedProcedure || undefined) as any,
+    sourceTable: selectedSourceTable || undefined,
   };
+
+  // Diff helper: highlight changed words between two strings
+  function renderDiff(prev: string | null, curr: string | null) {
+    if (!prev && !curr) return <span className="italic opacity-40">N/A</span>;
+    if (!prev) return <span className="text-chart-2">{curr}</span>;
+    if (!curr) return <span className="line-through text-chart-5">{prev}</span>;
+    const prevParts = prev.split(/([\s,;|]+)/);
+    const currParts = curr.split(/([\s,;|]+)/);
+    const prevSet = new Set(prevParts);
+    const currSet = new Set(currParts);
+    return (
+      <>
+        {currParts.map((part, i) => (
+          <span key={i} className={!prevSet.has(part) ? "bg-chart-2/20 text-chart-2 rounded px-0.5" : ""}>
+            {part}
+          </span>
+        ))}
+      </>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -140,7 +170,17 @@ export default function AuditTimeline() {
             Visualize todas as alterações realizadas no SAP Business One
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant={diffMode ? "default" : "outline"}
+            size="sm"
+            onClick={() => setDiffMode(!diffMode)}
+            className="gap-2"
+            title="Ativar modo diff para visualizar diferenças entre conteúdo anterior e atual"
+          >
+            <SplitSquareHorizontal className="h-4 w-4" />
+            {diffMode ? "Diff Ativo" : "Modo Diff"}
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -178,7 +218,7 @@ export default function AuditTimeline() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
             {/* Date Range */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">Data Inicial</label>
@@ -247,6 +287,22 @@ export default function AuditTimeline() {
               </Select>
             </div>
 
+            {/* Source Table Filter */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Tabela Origem</label>
+              <Select value={selectedSourceTable} onValueChange={(v) => { setSelectedSourceTable(v === "all" ? "" : v); setPage(1); }}>
+                <SelectTrigger className="h-9 text-sm bg-background">
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {sourceTables?.map((t) => (
+                    <SelectItem key={t} value={t}><code className="text-xs">{t}</code></SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Search */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">Buscar</label>
@@ -278,8 +334,9 @@ export default function AuditTimeline() {
                   <th className="text-left p-3 font-medium text-muted-foreground text-xs uppercase tracking-wider">Rotina</th>
                   <th className="text-left p-3 font-medium text-muted-foreground text-xs uppercase tracking-wider">Usuário</th>
                   <th className="text-left p-3 font-medium text-muted-foreground text-xs uppercase tracking-wider">DocNum</th>
-                  <th className="text-left p-3 font-medium text-muted-foreground text-xs uppercase tracking-wider min-w-[200px]">Conteúdo Anterior</th>
-                  <th className="text-left p-3 font-medium text-muted-foreground text-xs uppercase tracking-wider min-w-[200px]">Conteúdo Atual</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground text-xs uppercase tracking-wider">Tabela</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground text-xs uppercase tracking-wider min-w-[200px]">{diffMode ? "Diff (Anterior → Atual)" : "Conteúdo Anterior"}</th>
+                  {!diffMode && <th className="text-left p-3 font-medium text-muted-foreground text-xs uppercase tracking-wider min-w-[200px]">Conteúdo Atual</th>}
                 </tr>
               </thead>
               <tbody>
@@ -317,12 +374,21 @@ export default function AuditTimeline() {
                         <td className="p-3 text-xs">{log.routine}</td>
                         <td className="p-3 text-xs font-medium">{log.sapUser}</td>
                         <td className="p-3 font-mono text-xs">{log.docNum || "-"}</td>
-                        <td className="p-3 text-xs text-muted-foreground max-w-[250px] truncate">
-                          {log.previousContent || <span className="italic opacity-50">N/A</span>}
-                        </td>
-                        <td className="p-3 text-xs max-w-[250px] truncate">
-                          {log.currentContent || <span className="italic opacity-50">N/A</span>}
-                        </td>
+                        <td className="p-3 font-mono text-xs text-muted-foreground">{log.sourceTable}</td>
+                        {diffMode ? (
+                          <td className="p-3 text-xs font-mono max-w-[400px]">
+                            {renderDiff(log.previousContent, log.currentContent)}
+                          </td>
+                        ) : (
+                          <>
+                            <td className="p-3 text-xs text-muted-foreground max-w-[250px] truncate font-mono">
+                              {log.previousContent || <span className="italic opacity-50">N/A</span>}
+                            </td>
+                            <td className="p-3 text-xs max-w-[250px] truncate font-mono">
+                              {log.currentContent || <span className="italic opacity-50">N/A</span>}
+                            </td>
+                          </>
+                        )}
                       </tr>
                     );
                   })
@@ -420,24 +486,37 @@ export default function AuditTimeline() {
               </div>
 
               <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-muted-foreground uppercase flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-chart-5" />
-                    Conteúdo Anterior
-                  </p>
-                  <div className="p-3 rounded-lg bg-chart-5/5 border border-chart-5/20 text-sm font-mono whitespace-pre-wrap break-all">
-                    {detailLog.previousContent || "N/A (Inclusão)"}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-muted-foreground uppercase flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-chart-5" />
+                      Conteúdo Anterior
+                    </p>
+                    <div className="p-3 rounded-lg bg-chart-5/5 border border-chart-5/20 text-xs font-mono whitespace-pre-wrap break-all max-h-[200px] overflow-y-auto">
+                      {detailLog.previousContent || <span className="italic opacity-50">N/A (Inclusão)</span>}
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-muted-foreground uppercase flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-chart-2" />
+                      Conteúdo Atual
+                    </p>
+                    <div className="p-3 rounded-lg bg-chart-2/5 border border-chart-2/20 text-xs font-mono whitespace-pre-wrap break-all max-h-[200px] overflow-y-auto">
+                      {detailLog.currentContent || <span className="italic opacity-50">N/A</span>}
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-muted-foreground uppercase flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-chart-2" />
-                    Conteúdo Atual
-                  </p>
-                  <div className="p-3 rounded-lg bg-chart-2/5 border border-chart-2/20 text-sm font-mono whitespace-pre-wrap break-all">
-                    {detailLog.currentContent || "N/A"}
+                {detailLog.previousContent && detailLog.currentContent && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-muted-foreground uppercase flex items-center gap-1.5">
+                      <SplitSquareHorizontal className="h-3 w-3" />
+                      Diferenças Destacadas (Conteúdo Atual)
+                    </p>
+                    <div className="p-3 rounded-lg bg-muted/30 border border-border/50 text-xs font-mono whitespace-pre-wrap break-all max-h-[150px] overflow-y-auto">
+                      {renderDiff(detailLog.previousContent, detailLog.currentContent)}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           )}

@@ -29,6 +29,8 @@ import {
   LogOut,
   PanelLeft,
   Shield,
+  Upload,
+  Settings2,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -38,7 +40,9 @@ import { Button } from "./ui/button";
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: History, label: "Timeline de Auditoria", path: "/audit" },
+  { icon: Upload, label: "Importar Dados", path: "/import" },
   { icon: FileText, label: "Relatórios", path: "/reports" },
+  { icon: Settings2, label: "Configurações", path: "/settings" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

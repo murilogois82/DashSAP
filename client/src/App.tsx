@@ -7,7 +7,9 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import AuditTimeline from "./pages/AuditTimeline";
 import Home from "./pages/Home";
+import Import from "./pages/Import";
 import Reports from "./pages/Reports";
+import Settings from "./pages/Settings";
 
 function Router() {
   return (
@@ -15,7 +17,9 @@ function Router() {
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/audit" component={AuditTimeline} />
+        <Route path="/import" component={Import} />
         <Route path="/reports" component={Reports} />
+        <Route path="/settings" component={Settings} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
       </Switch>
